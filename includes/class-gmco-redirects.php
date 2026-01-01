@@ -37,8 +37,17 @@ class GMCO_Redirects {
      * Обробка старих URL товарів
      */
     public function handle_old_product_urls() {
+        // За замовчуванням вимкнено: икористовуємо вбудований wp_old_slug_redirect
+        if (!apply_filters('gmco_enable_404_redirects', false)) {
+            return;
+        }
+
         // Перевіряємо чи це 404
         if (!is_404()) {
+            return;
+        }
+
+        if (is_admin() || wp_doing_ajax() || wp_doing_cron()) {
             return;
         }
         
@@ -57,8 +66,16 @@ class GMCO_Redirects {
         if (empty($old_slug)) {
             return;
         }
+
+        // Ігноруємо запити до файлів (шрифти/зображення/статичні ресурси)
+        if (preg_match('/\.(css|js|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|map)$/i', $old_slug)) {
+            return;
+        }
+        if (strpos($old_slug, '.') !== false) {
+            return;
+        }
         
-        GMCO_Logger::log("🔍 404 перехоплено, шукаємо редірект для: {$old_slug}");
+        // Логування 404 редіректів вимкнено за замовчуванням щоб не засмічувати логи.
         
         // Шукаємо товар з таким оригінальним slug
         $product_id = $this->find_product_by_old_slug($old_slug);
@@ -85,8 +102,6 @@ class GMCO_Redirects {
         $redirect_url = $this->get_redirect_from_database($old_slug);
         
         if ($redirect_url) {
-            GMCO_Logger::log("✅ Знайдено редірект в БД: {$old_slug} → {$redirect_url}");
-            
             // Оновлюємо статистику
             $this->update_redirect_stats($old_slug);
             
@@ -252,8 +267,6 @@ class GMCO_Redirects {
                     ),
                     array('%s', '%s', '%d', '%s')
                 );
-                
-                GMCO_Logger::log("📝 Автоматичний редірект: {$old_slug} → {$new_slug}");
             }
         }
     }

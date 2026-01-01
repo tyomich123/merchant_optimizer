@@ -43,11 +43,6 @@ class GMCO_ActionScheduler {
         add_action('action_scheduler_failed_execution', array($this, 'handle_failed_action'), 10, 2);
         
         // Логуємо тільки один раз при першій ініціалізації
-        static $logged = false;
-        if (!$logged) {
-            GMCO_Logger::log('✅ ActionScheduler integration активовано');
-            $logged = true;
-        }
     }
     
     /**
@@ -129,8 +124,12 @@ class GMCO_ActionScheduler {
         
         GMCO_Logger::log(sprintf('🚀 Запуск масової обробки %d товарів', count($product_ids)));
         
-        // Розбиваємо на батчі по 5 товарів для parallel processing
-        $batches = array_chunk($product_ids, 5);
+        $settings = get_option('gmco_settings', array());
+        $batch_size = max(1, intval($settings['batch_size'] ?? 5));
+        $delay_between = max(1, intval($settings['delay'] ?? 3));
+
+        // Розбиваємо на батчі для parallel processing
+        $batches = array_chunk($product_ids, $batch_size);
         
         $delay = 0;
         foreach ($batches as $batch_index => $batch) {
@@ -141,10 +140,10 @@ class GMCO_ActionScheduler {
                 self::GROUP_MANUAL
             );
             
-            $delay += 30; // 30 секунд між батчами
+            $delay += max(5, $delay_between * count($batch)); // швидший крок між батчами
         }
         
-        GMCO_Logger::log(sprintf('✅ Заплановано %d батчів по 5 товарів', count($batches)));
+        GMCO_Logger::log(sprintf('✅ Заплановано %d батчів по %d товарів', count($batches), $batch_size));
         
         return true;
     }
@@ -331,6 +330,7 @@ class GMCO_ActionScheduler {
             
             // Створюємо редірект зі старого URL на новий
             if ($old_slug !== $new_slug && class_exists('GMCO_Redirects')) {
+                add_post_meta($product_id, '_wp_old_slug', $old_slug, false);
                 GMCO_Redirects::add_redirect_on_slug_change($product_id, $old_slug, $new_slug);
             }
             
@@ -414,6 +414,7 @@ class GMCO_ActionScheduler {
             
             // Retry з експоненційною затримкою: 2, 4, 8 хвилин
             $delay = pow(2, $attempts) * 60;
+            $args['reoptimize'] = true;
             
             as_schedule_single_action(
                 time() + $delay,

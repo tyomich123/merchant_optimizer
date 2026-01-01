@@ -23,6 +23,19 @@ class GMCO_Logger {
         
         error_log($log_entry, 3, $log_file);
     }
+
+    /**
+     * Лог з захистом від спаму (одноразово за певний час)
+     */
+    public static function log_once($key, $message, $level = 'info', $ttl = 300) {
+        $transient_key = 'gmco_log_once_' . sanitize_key($key);
+        if (get_transient($transient_key)) {
+            return;
+        }
+
+        set_transient($transient_key, 1, $ttl);
+        self::log($message, $level);
+    }
     
     public static function get_logs($date = null) {
         if (!$date) {

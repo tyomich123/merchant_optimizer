@@ -34,7 +34,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-gmco-redirects.php';
 final class Google_Merchant_Content_Optimizer {
     private const VERSION = '2.6.1';
     
-    // Константи для обробки
+    // Констант для обробки
     private const BATCH_SIZE = 1;              // По 1 товару для надійності
     private const DELAY_BETWEEN = 3;           // 3 секунди між товарами
     private const MAX_EXECUTION_TIME = 50;     // 50 секунд на батч
@@ -130,7 +130,6 @@ final class Google_Merchant_Content_Optimizer {
         }
         
         GMCO_Redirects::instance();
-        GMCO_Logger::log('🔄 Система редіректів ініціалізована');
     }
     
     /* ====================================================================
@@ -475,6 +474,7 @@ final class Google_Merchant_Content_Optimizer {
             
             // Створюємо редірект
             if ($old_slug !== $new_slug && class_exists('GMCO_Redirects')) {
+                add_post_meta($product_id, '_wp_old_slug', $old_slug, false);
                 GMCO_Redirects::add_redirect_on_slug_change($product_id, $old_slug, $new_slug);
             }
             
@@ -511,7 +511,7 @@ final class Google_Merchant_Content_Optimizer {
         // Планування через WP Cron
         if (!wp_next_scheduled(self::CRON_BATCH)) {
             wp_schedule_single_event(time() + 5, self::CRON_BATCH);
-            GMCO_Logger::log('⏰ Наступний батч заплановано');
+            GMCO_Logger::log('⏰ Наступний батч заплаовано');
         }
         
         // Тригер cron
@@ -624,7 +624,7 @@ final class Google_Merchant_Content_Optimizer {
             $this->schedule_next_batch();
             
             // КРИТИЧНО: Форсуємо запуск cron НЕГАЙНО
-            GMCO_Logger::log('🚀 Форсований запуск першого батчу...');
+            GMCO_Logger::log('🚀 Форсований запуск першого батч...');
             
             // Спроба 1: Через spawn_cron()
             if (function_exists('spawn_cron')) {
@@ -728,7 +728,7 @@ final class Google_Merchant_Content_Optimizer {
         delete_transient(self::TR_LOCK);
         wp_clear_scheduled_hook(self::CRON_BATCH);
         
-        GMCO_Logger::log('🧹 Force Clear виконано', 'warning');
+        GMCO_Logger::log('🧹 Force Clear викоано', 'warning');
         
         wp_send_json_success(array('message' => 'Процес очищено'));
     }
